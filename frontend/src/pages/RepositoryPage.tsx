@@ -1,20 +1,33 @@
 import { useState } from "react";
 import { ApiError, api } from "../api/client";
 import { useRepository } from "../state/RepositoryContext";
+import { useAuth } from "../state/AuthContext";
+import { ProviderBadge } from "../components/SignInButtons";
+import type { Provider } from "../types";
 
 export function RepositoryPage() {
   const { repositories, selected, selectRepository, refresh } = useRepository();
+  const { user, providers } = useAuth();
   const [owner, setOwner] = useState("");
   const [name, setName] = useState("");
+  const [provider, setProvider] = useState<Provider>(user?.provider ?? "github");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Offer provider choice only when more than one is actually available.
+  const showProviderChoice =
+    (providers?.github ? 1 : 0) + (providers?.gitlab ? 1 : 0) > 1;
 
   async function connect(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError(null);
     try {
-      const { repository } = await api.connectRepository(owner.trim(), name.trim());
+      const { repository } = await api.connectRepository(
+        owner.trim(),
+        name.trim(),
+        provider,
+      );
       await refresh();
       selectRepository(repository.id);
       setOwner("");
@@ -32,8 +45,23 @@ export function RepositoryPage() {
       <h1 className="text-lg font-semibold">Connect a repository</h1>
 
       <form onSubmit={connect} className="card flex flex-wrap items-end gap-3">
+        {showProviderChoice ? (
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-slate-500">Provider</label>
+            <select
+              className="input"
+              value={provider}
+              onChange={(e) => setProvider(e.target.value as Provider)}
+            >
+              {providers?.github ? <option value="github">GitHub</option> : null}
+              {providers?.gitlab ? <option value="gitlab">GitLab</option> : null}
+            </select>
+          </div>
+        ) : null}
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-slate-500">Owner</label>
+          <label className="text-xs text-slate-500">
+            {provider === "gitlab" ? "Namespace" : "Owner"}
+          </label>
           <input
             className="input"
             placeholder="octocat"
@@ -83,9 +111,12 @@ export function RepositoryPage() {
                   >
                     {r.full_name}
                   </button>
-                  <div className="text-xs text-slate-500">
-                    {r.primary_language ?? "unknown"} · {r.default_branch}
-                    {r.is_private ? " · private" : ""}
+                  <div className="mt-0.5 flex items-center gap-2 text-xs text-slate-500">
+                    <ProviderBadge provider={r.provider} />
+                    <span>
+                      {r.primary_language ?? "unknown"} · {r.default_branch}
+                      {r.is_private ? " · private" : ""}
+                    </span>
                   </div>
                 </div>
                 {selected?.id === r.id ? (

@@ -11,7 +11,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.db.base import Base, engine
-from app.services.github_client import GitHubRepoMetadata
+from app.services.providers.base import RepoMetadata
 
 
 @pytest.fixture
@@ -20,10 +20,11 @@ def client(monkeypatch):
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
 
-    # Patch GitHub metadata + languages so no network is used.
+    # Patch provider metadata + languages so no network is used.
     def fake_meta(self, owner, name):
-        return GitHubRepoMetadata(
-            github_repo_id=123,
+        return RepoMetadata(
+            provider=self.name,
+            provider_repo_id="123",
             owner=owner,
             name=name,
             full_name=f"{owner}/{name}",
@@ -38,10 +39,10 @@ def client(monkeypatch):
         return {"Python": 1000}
 
     monkeypatch.setattr(
-        "app.services.github_client.GitHubClient.get_repo_metadata", fake_meta
+        "app.services.providers.github.GitHubProvider.get_repo_metadata", fake_meta
     )
     monkeypatch.setattr(
-        "app.services.github_client.GitHubClient.get_languages", fake_langs
+        "app.services.providers.github.GitHubProvider.get_languages", fake_langs
     )
 
     from app.main import app

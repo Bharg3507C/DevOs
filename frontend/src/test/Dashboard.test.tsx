@@ -15,6 +15,7 @@ vi.mock("../api/client", async () => {
 
 const repo: Repository = {
   id: 1,
+  provider: "github",
   owner: "octocat",
   name: "hello",
   full_name: "octocat/hello",

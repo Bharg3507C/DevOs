@@ -2,6 +2,7 @@
 
 export interface Repository {
   id: number;
+  provider: Provider;
   owner: string;
   name: string;
   full_name: string;
@@ -106,9 +107,12 @@ export interface FileDetail {
   max_complexity: number;
 }
 
+export type Provider = "github" | "gitlab";
+
 export interface CurrentUser {
   authenticated?: boolean;
   login?: string;
+  provider?: Provider;
   avatar_url?: string | null;
   dev_mode?: boolean;
 }

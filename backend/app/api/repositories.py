@@ -56,10 +56,10 @@ from app.schemas import (
     RepositoryOut,
 )
 from app.services.analysis_service import run_analysis
-from app.services.github_client import (
-    GitHubClient,
-    GitHubError,
+from app.services.providers import (
+    ProviderError,
     RepositoryAccessError,
+    get_provider,
 )
 
 router = APIRouter(prefix="/api/repositories", tags=["repositories"])
@@ -83,19 +83,30 @@ def connect_repository(
     db: Session = Depends(get_db),
     user: User = Depends(rate_limit_default),
 ) -> ConnectRepositoryResponse:
-    """Connect a GitHub repository after verifying access and fetching metadata."""
-    client = GitHubClient(token=user.access_token)
+    """Connect a repository after verifying access and fetching metadata.
+
+    The provider defaults to the connecting user's provider so the correct API
+    and token are used, but can be overridden per request.
+    """
+    provider_name = payload.provider or user.provider
+    provider = get_provider(provider_name, token=user.access_token)
     try:
-        meta = client.get_repo_metadata(payload.owner, payload.name)
-        languages = client.get_languages(payload.owner, payload.name)
+        meta = provider.get_repo_metadata(payload.owner, payload.name)
+        languages = provider.get_languages(payload.owner, payload.name)
     except RepositoryAccessError as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
-    except GitHubError as exc:
+    except ProviderError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    if meta.primary_language is None and languages:
+        # Derive a primary language from the languages breakdown when the
+        # provider does not report one directly (e.g. GitLab).
+        meta.primary_language = max(languages, key=languages.get)
 
     repo = (
         db.query(Repository)
         .filter(
+            Repository.provider == meta.provider,
             Repository.owner == meta.owner,
             Repository.name == meta.name,
             Repository.connected_by_id == user.id,
@@ -103,10 +114,16 @@ def connect_repository(
         .first()
     )
     if repo is None:
-        repo = Repository(connected_by_id=user.id, owner=meta.owner, name=meta.name)
+        repo = Repository(
+            connected_by_id=user.id,
+            provider=meta.provider,
+            owner=meta.owner,
+            name=meta.name,
+        )
         db.add(repo)
 
-    repo.github_repo_id = meta.github_repo_id
+    repo.provider = meta.provider
+    repo.provider_repo_id = meta.provider_repo_id
     repo.full_name = meta.full_name
     repo.default_branch = meta.default_branch
     repo.clone_url = meta.clone_url

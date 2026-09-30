@@ -10,8 +10,8 @@ app/
   core/        config, structured logging, security primitives
   db/          SQLAlchemy engine + session
   analysis/    static parsers (Python AST) and the repo walker
-  services/    github_client, ingestion (sandboxed clone), analysis_service
-  api/         auth (GitHub OAuth), repositories, jobs, diagnostics
+  services/    providers (GitHub/GitLab), ingestion (sandboxed clone), analysis_service
+  api/         auth (GitHub + GitLab OAuth), repositories, jobs, diagnostics
   models.py    knowledge-graph ORM models
   schemas.py   Pydantic request/response models
   main.py      app factory + middleware

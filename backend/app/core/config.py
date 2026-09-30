@@ -33,12 +33,26 @@ class Settings(BaseSettings):
     session_secret: str = Field(default="dev-insecure-secret", alias="SESSION_SECRET")
     cors_origins: str = Field(default="http://localhost:5173", alias="CORS_ORIGINS")
 
+    # --- Frontend base (where OAuth flows return the user) ---
+    frontend_base_url: str = Field(
+        default="http://localhost:5173", alias="FRONTEND_BASE_URL"
+    )
+
     # --- GitHub OAuth ---
     github_client_id: str = Field(default="", alias="GITHUB_CLIENT_ID")
     github_client_secret: str = Field(default="", alias="GITHUB_CLIENT_SECRET")
     github_oauth_callback_url: str = Field(
         default="http://localhost:8000/api/auth/github/callback",
         alias="GITHUB_OAUTH_CALLBACK_URL",
+    )
+
+    # --- GitLab OAuth ---
+    gitlab_base_url: str = Field(default="https://gitlab.com", alias="GITLAB_BASE_URL")
+    gitlab_client_id: str = Field(default="", alias="GITLAB_CLIENT_ID")
+    gitlab_client_secret: str = Field(default="", alias="GITLAB_CLIENT_SECRET")
+    gitlab_oauth_callback_url: str = Field(
+        default="http://localhost:8000/api/auth/gitlab/callback",
+        alias="GITLAB_OAUTH_CALLBACK_URL",
     )
 
     # --- Analysis sandbox / limits ---
@@ -54,6 +68,14 @@ class Settings(BaseSettings):
     @property
     def github_oauth_configured(self) -> bool:
         return bool(self.github_client_id and self.github_client_secret)
+
+    @property
+    def gitlab_oauth_configured(self) -> bool:
+        return bool(self.gitlab_client_id and self.gitlab_client_secret)
+
+    @property
+    def any_oauth_configured(self) -> bool:
+        return self.github_oauth_configured or self.gitlab_oauth_configured
 
 
 @lru_cache

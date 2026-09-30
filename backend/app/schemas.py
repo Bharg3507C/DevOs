@@ -14,6 +14,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class ConnectRepositoryRequest(BaseModel):
     owner: str = Field(min_length=1, max_length=255)
     name: str = Field(min_length=1, max_length=255)
+    provider: str | None = Field(default=None, pattern="^(github|gitlab)$")
 
 
 class AskRequest(BaseModel):
@@ -25,6 +26,7 @@ class RepositoryOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    provider: str
     owner: str
     name: str
     full_name: str

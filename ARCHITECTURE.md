@@ -7,7 +7,7 @@ phases land.
 ## System overview
 
 ```
-GitHub
+GitHub / GitLab
   ↓  (OAuth, REST API)
 Repository Connector  ──────────────┐
   ↓                                 │  metadata
@@ -30,6 +30,7 @@ The backend is split into layers:
 | -------------- | -------------------------- | ------------------------------------------------ |
 | API            | `app.api`                  | HTTP routes, request/response schemas            |
 | Services       | `app.services`             | Business logic: connect, ingest, run analysis    |
+| Providers      | `app.services.providers`   | Pluggable git hosts (GitHub, GitLab)             |
 | Analysis       | `app.analysis`             | Parsers and deterministic analysers              |
 | Persistence    | `app.db`, `app.models`     | SQLAlchemy models, session management            |
 | Core           | `app.core`                 | Config, logging, security primitives             |
@@ -106,8 +107,21 @@ Each signal is normalised to `[0, 1]` and combined with documented weights. A
 finding stores the raw signal values and the weights used, so any score is fully
 reconstructable and explainable. No hidden model.
 
+## Provider abstraction
+
+Git hosts are accessed through a `RepoProvider` protocol
+(`app.services.providers.base`). Each host implements `get_repo_metadata`,
+`get_languages`, and `authenticated_clone_url`, returning a provider-neutral
+`RepoMetadata`. `get_provider(name, token)` is the factory. Adding a host means
+adding one module and registering it in `PROVIDERS` — the API, ingestion, and
+analysis layers are provider-agnostic. Users and repositories both carry a
+`provider` column, and a user is uniquely identified by
+`(provider, provider_user_id)`, so one person can connect both GitHub and
+GitLab accounts.
+
 ## Security boundary
 
 See [SECURITY.md](./SECURITY.md). Key points: sandboxed clone directory, path
 traversal validation, static parsing only (no `exec`/`import` of repo code),
-server-side token storage, and rate limiting.
+server-side token storage (tokens injected into clone URLs only at clone time,
+never returned to the frontend), and rate limiting.

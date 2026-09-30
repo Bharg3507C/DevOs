@@ -38,8 +38,10 @@ from app.models import (
     RepositoryAnalysis,
     Symbol,
     Test,
+    User,
 )
 from app.services import ingestion
+from app.services.providers import get_provider
 
 logger = get_logger("devos.analysis")
 settings = get_settings()
@@ -344,11 +346,16 @@ def run_analysis(job_id: int) -> None:
             extra={"extra": {"job_id": job_id, "repository": repository.full_name}},
         )
 
-        # 1. Clone
+        # 1. Clone. Build a provider-authenticated URL so private repos clone
+        # with the connecting user's token; public repos work without one.
         _set_step(job, "Reading files", "running")
         db.commit()
+        owner_user = db.get(User, repository.connected_by_id)
+        token = owner_user.access_token if owner_user else None
+        provider = get_provider(repository.provider, token=token)
+        clone_url = provider.authenticated_clone_url(repository.clone_url, token)
         repo_path = ingestion.clone_repository(
-            repository.clone_url, repository.id, repository.default_branch
+            clone_url, repository.id, repository.default_branch
         )
         _clear_repo_data(db, repository.id)
 

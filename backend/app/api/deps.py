@@ -23,9 +23,19 @@ settings = get_settings()
 
 
 def _get_or_create_local_user(db: Session) -> User:
-    user = db.query(User).filter(User.github_id == 0).first()
+    user = (
+        db.query(User)
+        .filter(User.provider == "github", User.provider_user_id == "0")
+        .first()
+    )
     if user is None:
-        user = User(github_id=0, login="local-dev", email=None, avatar_url=None)
+        user = User(
+            provider="github",
+            provider_user_id="0",
+            login="local-dev",
+            email=None,
+            avatar_url=None,
+        )
         db.add(user)
         db.commit()
         db.refresh(user)
@@ -44,7 +54,7 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
         if user is not None:
             return user
 
-    if settings.environment == "development" and not settings.github_oauth_configured:
+    if settings.environment == "development" and not settings.any_oauth_configured:
         return _get_or_create_local_user(db)
 
     raise HTTPException(

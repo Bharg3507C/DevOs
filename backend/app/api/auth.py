@@ -1,13 +1,14 @@
-"""GitHub OAuth authentication routes.
+"""Multi-provider OAuth authentication (GitHub + GitLab).
 
-Flow:
-  GET  /api/auth/github/login     -> redirect to GitHub authorize
-  GET  /api/auth/github/callback  -> exchange code, store user + token server-side
-  POST /api/auth/logout           -> clear session
-  GET  /api/auth/me               -> current user (no token exposed)
+Flow (per provider ``p`` in {github, gitlab}):
+  GET  /api/auth/{p}/login     -> redirect to provider authorize
+  GET  /api/auth/{p}/callback  -> exchange code, upsert user + token server-side
+  POST /api/auth/logout        -> clear session
+  GET  /api/auth/me            -> current user (no token exposed)
+  GET  /api/auth/providers     -> which providers are configured
 
-The access token is stored on the ``users`` row (server-side only) and is never
-returned to the frontend. A ``state`` parameter guards against CSRF.
+Access tokens are stored server-side on the ``users`` row and never returned to
+the frontend. A ``state`` parameter guards against CSRF.
 """
 
 from __future__ import annotations
@@ -32,77 +33,134 @@ GITHUB_TOKEN = "https://github.com/login/oauth/access_token"
 GITHUB_USER = "https://api.github.com/user"
 
 
-@router.get("/github/login")
-def github_login(request: Request) -> RedirectResponse:
-    if not settings.github_oauth_configured:
-        raise HTTPException(
-            status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail="GitHub OAuth is not configured on the server.",
-        )
+def _provider_config(provider: str) -> dict:
+    if provider == "github":
+        if not settings.github_oauth_configured:
+            raise HTTPException(501, "GitHub OAuth is not configured on the server.")
+        return {
+            "authorize": GITHUB_AUTHORIZE,
+            "token": GITHUB_TOKEN,
+            "client_id": settings.github_client_id,
+            "client_secret": settings.github_client_secret,
+            "callback": settings.github_oauth_callback_url,
+            "scope": "read:user repo",
+        }
+    if provider == "gitlab":
+        if not settings.gitlab_oauth_configured:
+            raise HTTPException(501, "GitLab OAuth is not configured on the server.")
+        base = settings.gitlab_base_url.rstrip("/")
+        return {
+            "authorize": f"{base}/oauth/authorize",
+            "token": f"{base}/oauth/token",
+            "client_id": settings.gitlab_client_id,
+            "client_secret": settings.gitlab_client_secret,
+            "callback": settings.gitlab_oauth_callback_url,
+            "scope": "read_api read_user read_repository",
+        }
+    raise HTTPException(404, "Unknown provider.")
+
+
+@router.get("/providers")
+def providers() -> JSONResponse:
+    return JSONResponse(
+        {
+            "github": settings.github_oauth_configured,
+            "gitlab": settings.gitlab_oauth_configured,
+            "dev_mode": settings.environment == "development"
+            and not settings.any_oauth_configured,
+        }
+    )
+
+
+@router.get("/{provider}/login")
+def login(provider: str, request: Request) -> RedirectResponse:
+    cfg = _provider_config(provider)
     state = secrets.token_urlsafe(24)
     request.session["oauth_state"] = state
+    request.session["oauth_provider"] = provider
     params = {
-        "client_id": settings.github_client_id,
-        "redirect_uri": settings.github_oauth_callback_url,
-        "scope": "read:user repo",
+        "client_id": cfg["client_id"],
+        "redirect_uri": cfg["callback"],
+        "scope": cfg["scope"],
         "state": state,
+        "response_type": "code",
     }
-    return RedirectResponse(f"{GITHUB_AUTHORIZE}?{urlencode(params)}")
+    return RedirectResponse(f"{cfg['authorize']}?{urlencode(params)}")
 
 
-@router.get("/github/callback")
-def github_callback(
-    request: Request,
-    code: str,
-    state: str,
-    db: Session = Depends(get_db),
-) -> RedirectResponse:
-    expected = request.session.pop("oauth_state", None)
-    if not expected or not secrets.compare_digest(expected, state):
-        raise HTTPException(status_code=400, detail="Invalid OAuth state.")
-
+def _exchange_and_fetch_user(provider: str, cfg: dict, code: str) -> tuple[str, dict]:
+    """Exchange the code for a token and fetch the provider user profile."""
     with httpx.Client(timeout=15.0) as client:
         token_resp = client.post(
-            GITHUB_TOKEN,
+            cfg["token"],
             headers={"Accept": "application/json"},
             data={
-                "client_id": settings.github_client_id,
-                "client_secret": settings.github_client_secret,
+                "client_id": cfg["client_id"],
+                "client_secret": cfg["client_secret"],
                 "code": code,
-                "redirect_uri": settings.github_oauth_callback_url,
+                "redirect_uri": cfg["callback"],
+                "grant_type": "authorization_code",
             },
         )
         token_data = token_resp.json()
         access_token = token_data.get("access_token")
         if not access_token:
-            raise HTTPException(status_code=400, detail="Failed to obtain access token.")
+            raise HTTPException(400, "Failed to obtain access token.")
 
-        user_resp = client.get(
-            GITHUB_USER,
-            headers={
+        if provider == "github":
+            user_url = GITHUB_USER
+            headers = {
                 "Authorization": f"Bearer {access_token}",
                 "Accept": "application/vnd.github+json",
-            },
-        )
-        if user_resp.status_code >= 400:
-            raise HTTPException(status_code=400, detail="Failed to fetch GitHub user.")
-        gh = user_resp.json()
+            }
+        else:  # gitlab
+            base = settings.gitlab_base_url.rstrip("/")
+            user_url = f"{base}/api/v4/user"
+            headers = {"Authorization": f"Bearer {access_token}"}
 
-    user = db.query(User).filter(User.github_id == gh["id"]).first()
+        user_resp = client.get(user_url, headers=headers)
+        if user_resp.status_code >= 400:
+            raise HTTPException(400, "Failed to fetch provider user.")
+        return access_token, user_resp.json()
+
+
+@router.get("/{provider}/callback")
+def callback(
+    provider: str,
+    request: Request,
+    code: str,
+    state: str,
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    cfg = _provider_config(provider)
+    expected = request.session.pop("oauth_state", None)
+    if not expected or not secrets.compare_digest(expected, state):
+        raise HTTPException(400, "Invalid OAuth state.")
+
+    access_token, profile = _exchange_and_fetch_user(provider, cfg, code)
+
+    provider_user_id = str(profile["id"])
+    login_name = profile.get("login") or profile.get("username") or f"user-{provider_user_id}"
+    avatar = profile.get("avatar_url")
+    email = profile.get("email")
+
+    user = (
+        db.query(User)
+        .filter(User.provider == provider, User.provider_user_id == provider_user_id)
+        .first()
+    )
     if user is None:
-        user = User(github_id=gh["id"], login=gh["login"])
+        user = User(provider=provider, provider_user_id=provider_user_id, login=login_name)
         db.add(user)
-    user.login = gh["login"]
-    user.email = gh.get("email")
-    user.avatar_url = gh.get("avatar_url")
+    user.login = login_name
+    user.email = email
+    user.avatar_url = avatar
     user.access_token = access_token  # server-side only
     db.commit()
     db.refresh(user)
 
     request.session["user_id"] = user.id
-    # Send the user back to the frontend.
-    frontend = settings.cors_origin_list[0] if settings.cors_origin_list else "/"
-    return RedirectResponse(url=frontend)
+    return RedirectResponse(url=settings.frontend_base_url)
 
 
 @router.post("/logout")
@@ -115,18 +173,19 @@ def logout(request: Request) -> JSONResponse:
 def me(request: Request, db: Session = Depends(get_db)) -> JSONResponse:
     user_id = request.session.get("user_id")
     if user_id is None:
-        if settings.environment == "development" and not settings.github_oauth_configured:
+        if settings.environment == "development" and not settings.any_oauth_configured:
             return JSONResponse(
-                {"login": "local-dev", "avatar_url": None, "dev_mode": True}
+                {"authenticated": True, "login": "local-dev", "provider": "github", "dev_mode": True}
             )
-        return JSONResponse({"authenticated": False}, status_code=200)
+        return JSONResponse({"authenticated": False})
     user = db.get(User, user_id)
     if user is None:
-        return JSONResponse({"authenticated": False}, status_code=200)
+        return JSONResponse({"authenticated": False})
     return JSONResponse(
         {
             "authenticated": True,
             "login": user.login,
+            "provider": user.provider,
             "avatar_url": user.avatar_url,
         }
     )

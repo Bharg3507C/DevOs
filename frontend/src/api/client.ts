@@ -44,15 +44,25 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await resp.json()) as T;
 }
 
+export interface ProvidersStatus {
+  github: boolean;
+  gitlab: boolean;
+  dev_mode: boolean;
+}
+
 export const api = {
   me: () => request<CurrentUser>("/api/auth/me"),
 
+  providers: () => request<ProvidersStatus>("/api/auth/providers"),
+
+  logout: () => request<{ ok: boolean }>("/api/auth/logout", { method: "POST" }),
+
   listRepositories: () => request<Repository[]>("/api/repositories"),
 
-  connectRepository: (owner: string, name: string) =>
+  connectRepository: (owner: string, name: string, provider?: string) =>
     request<{ repository: Repository }>("/api/repositories/connect", {
       method: "POST",
-      body: JSON.stringify({ owner, name }),
+      body: JSON.stringify({ owner, name, provider }),
     }),
 
   getRepository: (id: number) => request<Repository>(`/api/repositories/${id}`),

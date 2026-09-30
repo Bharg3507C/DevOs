@@ -42,10 +42,20 @@ class JobStatus(str, PyEnum):
 
 
 class User(Base):
+    """An authenticated user, identified by the hosting provider + their id.
+
+    A person who signs in with both GitHub and GitLab has two user rows (one per
+    provider); each carries its own access token.
+    """
+
     __tablename__ = "users"
+    __table_args__ = (
+        UniqueConstraint("provider", "provider_user_id", name="uq_user_provider_id"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    github_id: Mapped[int] = mapped_column(Integer, unique=True, index=True)
+    provider: Mapped[str] = mapped_column(String(16), default="github", index=True)
+    provider_user_id: Mapped[str] = mapped_column(String(64), index=True)
     login: Mapped[str] = mapped_column(String(255), index=True)
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     avatar_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
@@ -66,7 +76,8 @@ class Repository(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    github_repo_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    provider: Mapped[str] = mapped_column(String(16), default="github", index=True)
+    provider_repo_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     owner: Mapped[str] = mapped_column(String(255))
     name: Mapped[str] = mapped_column(String(255))
     full_name: Mapped[str] = mapped_column(String(512), index=True)

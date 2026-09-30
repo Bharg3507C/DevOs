@@ -1,4 +1,6 @@
-import { NavLink } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
+import { useAuth } from "../state/AuthContext";
+import { GitHubMark, GitLabMark } from "./ProviderIcons";
 
 const NAV = [
   { to: "/dashboard", label: "Dashboard" },
@@ -17,14 +19,18 @@ const NAV = [
 const PHASE1_READY = new Set(["/dashboard", "/repository", "/files", "/settings"]);
 
 export function Sidebar() {
+  const { user, logout } = useAuth();
   return (
     <aside className="flex w-56 shrink-0 flex-col border-r border-border bg-bg-soft">
-      <div className="px-4 py-4">
-        <div className="text-lg font-semibold tracking-tight">DevOS</div>
-        <div className="text-xs text-slate-500">
+      <Link to="/" className="block px-4 py-4">
+        <div className="flex items-center gap-2">
+          <div className="h-4 w-4 rounded bg-accent" />
+          <span className="text-lg font-semibold tracking-tight">DevOS</span>
+        </div>
+        <div className="mt-1 text-xs text-slate-500">
           Understand your codebase before you change it.
         </div>
-      </div>
+      </Link>
       <nav className="flex-1 space-y-0.5 px-2">
         {NAV.map((item) => (
           <NavLink
@@ -47,7 +53,27 @@ export function Sidebar() {
           </NavLink>
         ))}
       </nav>
-      <div className="px-4 py-3 text-[11px] text-slate-600">Phase 1 · v0.1.0</div>
+      <div className="border-t border-border px-4 py-3">
+        {user?.authenticated ? (
+          <div className="flex items-center justify-between">
+            <span className="flex items-center gap-1.5 text-xs text-slate-400">
+              {user.provider === "gitlab" ? (
+                <GitLabMark className="h-3.5 w-3.5" />
+              ) : (
+                <GitHubMark className="h-3.5 w-3.5" />
+              )}
+              {user.login}
+            </span>
+            <button
+              onClick={() => void logout()}
+              className="text-[11px] text-slate-500 hover:text-slate-300"
+            >
+              Sign out
+            </button>
+          </div>
+        ) : null}
+        <div className="mt-2 text-[11px] text-slate-600">v0.1.0</div>
+      </div>
     </aside>
   );
 }
