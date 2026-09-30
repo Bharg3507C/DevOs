@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-bg text-slate-200 antialiased;
+  font-family:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Light mode overrides when the `dark` class is absent from <html>. */
+html:not(.dark) body {
+  @apply bg-white text-slate-900;
+}
+
+@layer components {
+  .card {
+    @apply rounded-lg border border-border bg-bg-card p-4;
+  }
+  html:not(.dark) .card {
+    @apply border-slate-200 bg-white;
+  }
+  .btn {
+    @apply inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors;
+  }
+  .btn-primary {
+    @apply btn bg-accent text-white hover:bg-accent/90 disabled:opacity-50;
+  }
+  .btn-ghost {
+    @apply btn border border-border text-slate-300 hover:bg-bg-soft;
+  }
+  .input {
+    @apply rounded-md border border-border bg-bg-soft px-3 py-1.5 text-sm outline-none focus:border-accent;
+  }
+  html:not(.dark) .input {
+    @apply border-slate-300 bg-white text-slate-900;
+  }
+}
