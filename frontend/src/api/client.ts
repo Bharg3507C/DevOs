@@ -3,11 +3,17 @@
 
 import type {
   AnalysisJob,
+  Architecture,
+  BrowseResult,
   CurrentUser,
   FileDetail,
+  GitHistory,
+  ImpactResponse,
   Overview,
   PaginatedFiles,
   Repository,
+  SearchResponse,
+  TechnicalDebt,
 } from "../types";
 
 const BASE_URL =
@@ -51,13 +57,18 @@ export interface ProvidersStatus {
 }
 
 export const api = {
+  // --- Auth ---
   me: () => request<CurrentUser>("/api/auth/me"),
-
   providers: () => request<ProvidersStatus>("/api/auth/providers"),
-
   logout: () => request<{ ok: boolean }>("/api/auth/logout", { method: "POST" }),
+  devLogin: () =>
+    request<{ ok: boolean }>("/api/auth/dev-login", { method: "POST" }),
 
+  // --- Repositories ---
   listRepositories: () => request<Repository[]>("/api/repositories"),
+
+  browseProviderRepos: () =>
+    request<BrowseResult>("/api/repositories/browse"),
 
   connectRepository: (owner: string, name: string, provider?: string) =>
     request<{ repository: Repository }>("/api/repositories/connect", {
@@ -89,6 +100,40 @@ export const api = {
   getFileDetail: (id: number, fileId: number) =>
     request<FileDetail>(`/api/repositories/${id}/files/${fileId}`),
 
+  // --- Architecture ---
+  getArchitecture: (id: number) =>
+    request<Architecture>(`/api/repositories/${id}/architecture`),
+
+  // --- Git history ---
+  getGitHistory: (id: number, page = 1, pageSize = 50) => {
+    const params = new URLSearchParams({
+      page: String(page),
+      page_size: String(pageSize),
+    });
+    return request<GitHistory>(
+      `/api/repositories/${id}/git-history?${params.toString()}`,
+    );
+  },
+
+  // --- Search ---
+  search: (id: number, q: string, limit = 40) => {
+    const params = new URLSearchParams({ q, limit: String(limit) });
+    return request<SearchResponse>(
+      `/api/repositories/${id}/search?${params.toString()}`,
+    );
+  },
+
+  // --- Change impact ---
+  getImpact: (repoId: number, fileId: number) =>
+    request<ImpactResponse>(
+      `/api/repositories/${repoId}/impact?file_id=${fileId}`,
+    ),
+
+  // --- Technical debt ---
+  getTechnicalDebt: (id: number) =>
+    request<TechnicalDebt>(`/api/repositories/${id}/technical-debt`),
+
+  // --- Jobs ---
   getJob: (jobId: number) =>
     request<AnalysisJob>(`/api/analysis-jobs/${jobId}`),
 };

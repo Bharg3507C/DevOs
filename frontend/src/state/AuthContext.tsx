@@ -17,6 +17,7 @@ interface AuthContextValue {
   authenticated: boolean;
   refresh: () => Promise<void>;
   logout: () => Promise<void>;
+  devLogin: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -45,6 +46,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await refresh();
   }, [refresh]);
 
+  const devLogin = useCallback(async () => {
+    await api.devLogin().catch(() => undefined);
+    await refresh();
+  }, [refresh]);
+
   useEffect(() => {
     void refresh();
   }, [refresh]);
@@ -57,8 +63,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       authenticated: Boolean(user?.authenticated),
       refresh,
       logout,
+      devLogin,
     }),
-    [user, providers, loading, refresh, logout],
+    [user, providers, loading, refresh, logout, devLogin],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

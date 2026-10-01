@@ -2,8 +2,70 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+  Palette: rose #db5461, sage #8aa29e, light blue #e3f2fd.
+  Dark-first premium design (Linear/Vercel-inspired): a deep near-black canvas
+  makes the rose accent pop; sage is the secondary/positive accent; the light
+  blue is used sparingly for soft highlights and the graph. A light theme mirror
+  is provided for the toggle. Tokens are RGB triplets so Tailwind alpha
+  modifiers work.
+*/
 :root {
+  /* Dark theme (default) */
+  --bg: 9 11 16; /* near-black with a cool tint */
+  --bg-soft: 15 18 25;
+  --bg-card: 19 23 31;
+  --bg-elevated: 25 30 40;
+  --border: 34 41 54;
+  --border-strong: 48 57 73;
+  --content: 233 238 245;
+  --content-muted: 148 161 178;
+  --content-faint: 100 112 130;
+
+  --accent: 226 100 112; /* rose, slightly lifted for dark */
+  --accent-strong: 219 84 97; /* #db5461 */
+  --accent-soft: 40 24 28;
+  --accent-contrast: 255 255 255;
+
+  --sage: 138 162 158; /* #8aa29e */
+  --sage-soft: 28 38 37;
+
+  --highlight: 227 242 253; /* #e3f2fd */
+
+  --risk-high: 232 110 122;
+  --risk-medium: 224 179 65;
+  --risk-low: 138 162 158;
+
   color-scheme: dark;
+}
+
+html.light {
+  /* Light theme mirror */
+  --bg: 246 248 251;
+  --bg-soft: 240 243 248;
+  --bg-card: 255 255 255;
+  --bg-elevated: 255 255 255;
+  --border: 224 230 238;
+  --border-strong: 203 213 225;
+  --content: 22 30 44;
+  --content-muted: 82 98 118;
+  --content-faint: 130 145 164;
+
+  --accent: 214 74 88;
+  --accent-strong: 219 84 97;
+  --accent-soft: 250 228 231;
+  --accent-contrast: 255 255 255;
+
+  --sage: 106 134 129;
+  --sage-soft: 226 234 232;
+
+  --highlight: 227 242 253;
+
+  --risk-high: 214 74 88;
+  --risk-medium: 190 138 70;
+  --risk-low: 106 134 129;
+
+  color-scheme: light;
 }
 
 html,
@@ -13,36 +75,160 @@ body,
 }
 
 body {
-  @apply bg-bg text-slate-200 antialiased;
+  background-color: rgb(var(--bg));
+  color: rgb(var(--content));
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
   font-family:
-    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", sans-serif;
 }
 
-/* Light mode overrides when the `dark` class is absent from <html>. */
-html:not(.dark) body {
-  @apply bg-white text-slate-900;
+/* Thin, unobtrusive scrollbars that match the theme. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--border-strong)) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: rgb(var(--border-strong));
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
 }
 
 @layer components {
   .card {
-    @apply rounded-lg border border-border bg-bg-card p-4;
+    border-radius: 0.75rem;
+    border: 1px solid rgb(var(--border));
+    background-color: rgb(var(--bg-card));
+    padding: 1.25rem;
+    box-shadow:
+      0 1px 2px rgb(0 0 0 / 0.16),
+      0 1px 1px rgb(0 0 0 / 0.06);
   }
-  html:not(.dark) .card {
-    @apply border-slate-200 bg-white;
+
+  .card-hover {
+    transition:
+      border-color 0.18s ease,
+      transform 0.18s ease,
+      box-shadow 0.18s ease;
   }
-  .btn {
-    @apply inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors;
+  .card-hover:hover {
+    border-color: rgb(var(--border-strong));
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgb(0 0 0 / 0.28);
   }
-  .btn-primary {
-    @apply btn bg-accent text-white hover:bg-accent/90 disabled:opacity-50;
-  }
+
+  .btn,
+  .btn-primary,
   .btn-ghost {
-    @apply btn border border-border text-slate-300 hover:bg-bg-soft;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.9rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 500;
+    white-space: nowrap;
+    transition:
+      background-color 0.15s ease,
+      border-color 0.15s ease,
+      color 0.15s ease,
+      box-shadow 0.15s ease,
+      transform 0.05s ease;
   }
+  .btn:active,
+  .btn-primary:active,
+  .btn-ghost:active {
+    transform: translateY(0.5px);
+  }
+
+  .btn-primary {
+    background-image: linear-gradient(
+      180deg,
+      rgb(var(--accent)),
+      rgb(var(--accent-strong))
+    );
+    color: rgb(var(--accent-contrast));
+    box-shadow:
+      0 1px 0 rgb(255 255 255 / 0.08) inset,
+      0 6px 18px rgb(var(--accent-strong) / 0.28);
+  }
+  .btn-primary:hover {
+    box-shadow:
+      0 1px 0 rgb(255 255 255 / 0.12) inset,
+      0 8px 24px rgb(var(--accent-strong) / 0.4);
+  }
+  .btn-primary:disabled {
+    opacity: 0.5;
+    box-shadow: none;
+  }
+
+  .btn-ghost {
+    border: 1px solid rgb(var(--border-strong));
+    color: rgb(var(--content-muted));
+    background-color: transparent;
+  }
+  .btn-ghost:hover {
+    background-color: rgb(var(--bg-elevated));
+    color: rgb(var(--content));
+  }
+
   .input {
-    @apply rounded-md border border-border bg-bg-soft px-3 py-1.5 text-sm outline-none focus:border-accent;
+    border-radius: 0.5rem;
+    border: 1px solid rgb(var(--border-strong));
+    background-color: rgb(var(--bg-soft));
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    color: rgb(var(--content));
+    outline: none;
+    transition:
+      border-color 0.15s ease,
+      box-shadow 0.15s ease;
   }
-  html:not(.dark) .input {
-    @apply border-slate-300 bg-white text-slate-900;
+  .input::placeholder {
+    color: rgb(var(--content-faint));
+  }
+  .input:focus {
+    border-color: rgb(var(--accent));
+    box-shadow: 0 0 0 3px rgb(var(--accent) / 0.18);
+  }
+
+  /* Section eyebrow label used on marketing + app headers. */
+  .eyebrow {
+    font-size: 0.6875rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgb(var(--content-faint));
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    background-image: linear-gradient(
+      110deg,
+      rgb(var(--accent)),
+      rgb(var(--highlight))
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .bg-grid {
+    background-image:
+      linear-gradient(rgb(var(--border) / 0.5) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(var(--border) / 0.5) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  .glass {
+    background-color: rgb(var(--bg-card) / 0.7);
+    backdrop-filter: blur(12px);
   }
 }

@@ -34,7 +34,8 @@ function buildGraph(count: number): { nodes: Node3D[]; edges: Edge[] } {
       y: y * scale,
       z: Math.sin(theta) * radius * scale,
       r: 2 + Math.random() * 3,
-      hue: 210 + Math.random() * 40, // blue-ish accent range
+      // Palette-aligned: rose (~353) for most nodes, some sage (~163) accents.
+      hue: Math.random() < 0.7 ? 350 + Math.random() * 8 : 158 + Math.random() * 12,
     });
   }
   // Connect each node to a couple of nearest neighbours to form a graph.
@@ -115,7 +116,7 @@ export function DependencyGraph3D({ className }: { className?: string }) {
         const p = projected[e.a];
         const q = projected[e.b];
         const alpha = 0.05 + Math.max(0, (p.scale + q.scale) / 2 - 0.6) * 0.5;
-        ctx.strokeStyle = `rgba(79, 140, 255, ${alpha.toFixed(3)})`;
+        ctx.strokeStyle = `rgba(219, 84, 97, ${alpha.toFixed(3)})`;
         ctx.lineWidth = 0.6;
         ctx.beginPath();
         ctx.moveTo(p.sx, p.sy);
@@ -134,7 +135,7 @@ export function DependencyGraph3D({ className }: { className?: string }) {
         ctx.beginPath();
         ctx.arc(p.sx, p.sy, radius, 0, Math.PI * 2);
         ctx.fillStyle = `hsla(${n.hue}, 90%, ${Math.round(light * 65)}%, ${light})`;
-        ctx.shadowColor = "rgba(79, 140, 255, 0.6)";
+        ctx.shadowColor = "rgba(219, 84, 97, 0.55)";
         ctx.shadowBlur = 8 * p.scale;
         ctx.fill();
         ctx.shadowBlur = 0;

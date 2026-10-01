@@ -9,54 +9,68 @@ const STEP_ORDER = [
   "Calculating code metrics",
 ];
 
-function statusIcon(status: string): string {
-  if (status === "done") return "\u2713"; // ✓
-  if (status === "running") return "\u2026"; // …
-  return "\u00b7"; // ·
+function StepIcon({ status }: { status: string }) {
+  if (status === "done")
+    return (
+      <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-risk-low/20 text-[10px] text-risk-low">
+        ✓
+      </span>
+    );
+  if (status === "running")
+    return (
+      <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-accent/20 text-[10px] text-accent animate-spin">
+        ⟳
+      </span>
+    );
+  return (
+    <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full border border-border text-[10px] text-content-faint">
+      ·
+    </span>
+  );
 }
 
 export function AnalysisProgress({ job }: { job: AnalysisJob }) {
   const steps =
-    job.steps ??
-    STEP_ORDER.map((name) => ({ name, status: "pending" as const }));
+    job.steps ?? STEP_ORDER.map((name) => ({ name, status: "pending" as const }));
 
   return (
     <div className="card">
-      <div className="mb-2 text-sm font-medium">
-        {job.status === "completed"
-          ? "Repository analysis complete."
-          : job.status === "failed"
-            ? "Analysis failed."
-            : "Parsing repository\u2026"}
+      <div className="mb-4 flex items-center justify-between">
+        <p className="text-sm font-medium">
+          {job.status === "completed"
+            ? "Analysis complete"
+            : job.status === "failed"
+              ? "Analysis failed"
+              : "Analysing repository…"}
+        </p>
+        {job.status === "completed" && (
+          <span className="rounded-full bg-risk-low/15 px-2 py-0.5 text-xs text-risk-low">
+            {job.files_processed} files
+            {job.parsing_failures > 0 ? ` · ${job.parsing_failures} warnings` : ""}
+          </span>
+        )}
       </div>
-      <ul className="space-y-1 font-mono text-sm">
+      <ul className="space-y-2">
         {steps.map((step) => (
-          <li
-            key={step.name}
-            className={
-              step.status === "done"
-                ? "text-risk-low"
-                : step.status === "running"
-                  ? "text-accent"
-                  : "text-slate-500"
-            }
-          >
-            <span className="inline-block w-4">{statusIcon(step.status)}</span>
-            {step.name}
+          <li key={step.name} className="flex items-center gap-2.5">
+            <StepIcon status={step.status} />
+            <span
+              className={`text-sm ${
+                step.status === "done"
+                  ? "text-content"
+                  : step.status === "running"
+                    ? "text-content"
+                    : "text-content-faint"
+              }`}
+            >
+              {step.name}
+            </span>
           </li>
         ))}
       </ul>
       {job.status === "failed" && job.error ? (
-        <div className="mt-2 rounded border border-risk-high/40 bg-risk-high/10 p-2 text-xs text-risk-high">
+        <div className="mt-4 rounded-lg border border-risk-high/30 bg-risk-high/10 p-3 text-xs text-risk-high">
           {job.error}
-        </div>
-      ) : null}
-      {job.status === "completed" ? (
-        <div className="mt-2 text-xs text-slate-500">
-          {job.files_processed} files processed
-          {job.parsing_failures > 0
-            ? ` · ${job.parsing_failures} parse warnings`
-            : ""}
         </div>
       ) : null}
     </div>

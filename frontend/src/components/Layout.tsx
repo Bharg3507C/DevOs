@@ -5,44 +5,51 @@ import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { AnalysisProgress } from "./AnalysisProgress";
 
-// Analysis state lives at the layout level so progress persists while the user
-// navigates between routes during a run. It is exposed to child routes via the
-// Outlet context.
 export interface OutletContext {
-  refreshAfterAnalysis: () => void;
   lastCompletedJobId: number | null;
 }
 
 export function Layout() {
-  const { selected } = useRepository();
+  const { selected, refresh } = useRepository();
   const { job, error, starting, isRunning, start } = useAnalysis(
     selected?.id ?? null,
   );
 
-  const showProgress = job != null && (isRunning || job.status !== "queued");
+  // Refresh the repository list once analysis completes so overviews update.
+  const handleStart = async () => {
+    await start();
+    if (job?.status === "completed") void refresh();
+  };
+
+  const showProgress = job != null && job.status !== "queued";
 
   const outletContext: OutletContext = {
-    refreshAfterAnalysis: () => {},
     lastCompletedJobId: job?.status === "completed" ? job.id : null,
   };
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full overflow-hidden">
       <Sidebar />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar onAnalyse={start} analysing={starting || isRunning} job={job} />
-        <main className="min-h-0 flex-1 overflow-auto p-4">
-          {error ? (
-            <div className="mb-3 rounded border border-risk-high/40 bg-risk-high/10 p-2 text-sm text-risk-high">
-              {error}
-            </div>
-          ) : null}
-          {showProgress && job ? (
-            <div className="mb-4">
-              <AnalysisProgress job={job} />
-            </div>
-          ) : null}
-          <Outlet context={outletContext} />
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <TopBar
+          onAnalyse={() => void handleStart()}
+          analysing={starting || isRunning}
+          job={job}
+        />
+        <main className="flex-1 overflow-y-auto">
+          <div className="mx-auto max-w-6xl px-5 py-5">
+            {error && (
+              <div className="mb-4 rounded-lg border border-risk-high/30 bg-risk-high/10 p-3 text-sm text-risk-high">
+                {error}
+              </div>
+            )}
+            {showProgress && job && (
+              <div className="mb-5">
+                <AnalysisProgress job={job} />
+              </div>
+            )}
+            <Outlet context={outletContext} />
+          </div>
         </main>
       </div>
     </div>

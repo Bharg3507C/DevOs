@@ -66,8 +66,7 @@ def providers() -> JSONResponse:
         {
             "github": settings.github_oauth_configured,
             "gitlab": settings.gitlab_oauth_configured,
-            "dev_mode": settings.environment == "development"
-            and not settings.any_oauth_configured,
+            "dev_mode": settings.dev_login_active,
         }
     )
 
@@ -75,6 +74,8 @@ def providers() -> JSONResponse:
 @router.get("/{provider}/login")
 def login(provider: str, request: Request) -> RedirectResponse:
     cfg = _provider_config(provider)
+    # Starting a real sign-in clears any prior sign-out marker.
+    request.session.pop("signed_out", None)
     state = secrets.token_urlsafe(24)
     request.session["oauth_state"] = state
     request.session["oauth_provider"] = provider
@@ -163,9 +164,25 @@ def callback(
     return RedirectResponse(url=settings.frontend_base_url)
 
 
+@router.post("/dev-login")
+def dev_login(request: Request) -> JSONResponse:
+    """Enter the local development user (only when dev login is active).
+
+    This exists so that, after signing out in dev mode, the user can re-enter
+    without configuring OAuth. It is a no-op error outside dev mode.
+    """
+    if not settings.dev_login_active:
+        raise HTTPException(404, "Dev login is not available.")
+    request.session.pop("signed_out", None)
+    return JSONResponse({"ok": True})
+
+
 @router.post("/logout")
 def logout(request: Request) -> JSONResponse:
     request.session.clear()
+    # Mark the session as signed out so the dev-user fallback does not
+    # immediately re-authenticate the caller on the next request.
+    request.session["signed_out"] = True
     return JSONResponse({"ok": True})
 
 
@@ -173,7 +190,7 @@ def logout(request: Request) -> JSONResponse:
 def me(request: Request, db: Session = Depends(get_db)) -> JSONResponse:
     user_id = request.session.get("user_id")
     if user_id is None:
-        if settings.environment == "development" and not settings.any_oauth_configured:
+        if settings.dev_login_active and not request.session.get("signed_out"):
             return JSONResponse(
                 {"authenticated": True, "login": "local-dev", "provider": "github", "dev_mode": True}
             )

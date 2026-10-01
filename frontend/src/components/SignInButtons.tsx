@@ -17,7 +17,7 @@ export function SignInButtons({ size = "md" }: { size?: "md" | "lg" }) {
       <a
         href={githubOn ? `${BASE_URL}/api/auth/github/login` : undefined}
         aria-disabled={!githubOn}
-        className={`inline-flex items-center justify-center gap-2 rounded-md bg-white font-medium text-black transition hover:bg-slate-200 ${pad} ${
+        className={`inline-flex items-center justify-center gap-2 rounded-md bg-[#1f2328] font-medium text-white transition hover:bg-[#32383f] ${pad} ${
           githubOn ? "" : "pointer-events-none opacity-40"
         }`}
       >
@@ -35,7 +35,7 @@ export function SignInButtons({ size = "md" }: { size?: "md" | "lg" }) {
         Continue with GitLab
       </a>
       {devMode ? (
-        <p className="max-w-sm text-xs text-slate-500">
+        <p className="max-w-sm text-xs text-content-faint">
           OAuth isn&apos;t configured, so DevOS is running in local development
           mode with a local user. Set the provider client IDs/secrets to enable
           real sign-in.
@@ -47,7 +47,7 @@ export function SignInButtons({ size = "md" }: { size?: "md" | "lg" }) {
 
 export function ProviderBadge({ provider }: { provider: "github" | "gitlab" }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded bg-bg-soft px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-slate-400">
+    <span className="inline-flex items-center gap-1 rounded bg-bg-soft px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-content-muted">
       {provider === "github" ? (
         <GitHubMark className="h-3 w-3" />
       ) : (

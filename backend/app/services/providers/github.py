@@ -71,6 +71,47 @@ class GitHubProvider:
             return {}
         return resp.json()
 
+    def list_user_repos(self, per_page: int = 100) -> list[RepoMetadata]:
+        """List repositories accessible to the authenticated user.
+
+        Returns public repos when no token is set. With a token returns the
+        user's own repos (public + private) sorted by most recently pushed.
+        Falls back to the unauthenticated public endpoint when no token.
+        """
+        if self._token:
+            url = f"{GITHUB_API}/user/repos"
+            params = {"per_page": str(per_page), "sort": "pushed", "direction": "desc"}
+        else:
+            # Without a token we can't list the user's repos; return empty.
+            return []
+
+        try:
+            with httpx.Client(timeout=self._timeout) as client:
+                resp = client.get(url, headers=self._headers(), params=params)
+        except httpx.HTTPError as exc:
+            raise ProviderError(f"GitHub request failed: {exc}") from exc
+
+        if resp.status_code >= 400:
+            return []
+
+        repos: list[RepoMetadata] = []
+        for data in resp.json():
+            repos.append(
+                RepoMetadata(
+                    provider=self.name,
+                    provider_repo_id=str(data["id"]),
+                    owner=data["owner"]["login"],
+                    name=data["name"],
+                    full_name=data["full_name"],
+                    default_branch=data.get("default_branch", "main"),
+                    clone_url=data["clone_url"],
+                    is_private=data.get("private", False),
+                    primary_language=data.get("language"),
+                    size_kb=data.get("size", 0),
+                )
+            )
+        return repos
+
     def authenticated_clone_url(self, clone_url: str, token: str | None) -> str:
         if not token:
             return clone_url

@@ -19,7 +19,18 @@ from app.core.logging import get_logger
 from app.core.security import run_git, safe_join
 
 logger = get_logger("devos.ingestion")
-settings = get_settings()
+
+
+def _workdir_root() -> Path:
+    """Return the absolute workdir path, creating it if needed.
+
+    We call ``get_settings()`` here (not at module level) so that the
+    ``lru_cache`` is always read after the test suite has cleared it and after
+    the ``.env`` file has been loaded — avoiding stale relative paths.
+    """
+    root = Path(get_settings().resolved_workdir)
+    root.mkdir(parents=True, exist_ok=True)
+    return root
 
 
 @dataclass
@@ -44,12 +55,6 @@ class IngestionError(Exception):
     pass
 
 
-def _workdir_root() -> Path:
-    root = Path(settings.workdir)
-    root.mkdir(parents=True, exist_ok=True)
-    return root
-
-
 def repo_clone_path(repository_id: int) -> Path:
     """Return the sandboxed clone directory for a repository id."""
     root = _workdir_root()
@@ -60,35 +65,34 @@ def clone_repository(clone_url: str, repository_id: int, branch: str) -> Path:
     """Clone (or refresh) a repository into its sandbox directory.
 
     Returns the path to the working tree. Raises :class:`IngestionError` on
-    failure. The clone is shallow-ish but retains history for git-log analysis.
+    failure. The clone retains full history for git-log analysis.
     """
     target = repo_clone_path(repository_id)
     if target.exists():
         shutil.rmtree(target, ignore_errors=True)
     target.mkdir(parents=True, exist_ok=True)
 
-    # -c protects against repository-supplied hooks executing on clone/checkout.
+    timeout = get_settings().clone_timeout_seconds
+
+    # -c core.hooksPath=/dev/null prevents any repository hooks from executing.
     args = [
-        "-c",
-        "core.hooksPath=/dev/null",
+        "-c", "core.hooksPath=/dev/null",
         "clone",
         "--single-branch",
-        "--branch",
-        branch,
+        "--branch", branch,
         clone_url,
         str(target),
     ]
-    result = run_git(args, cwd=_workdir_root(), timeout=settings.clone_timeout_seconds)
+    result = run_git(args, cwd=_workdir_root(), timeout=timeout)
     if result.returncode != 0:
-        # Retry without an explicit branch (repo default may differ).
+        # Retry without an explicit branch — the default branch may differ.
         fallback = [
-            "-c",
-            "core.hooksPath=/dev/null",
+            "-c", "core.hooksPath=/dev/null",
             "clone",
             clone_url,
             str(target),
         ]
-        result = run_git(fallback, cwd=_workdir_root(), timeout=settings.clone_timeout_seconds)
+        result = run_git(fallback, cwd=_workdir_root(), timeout=timeout)
         if result.returncode != 0:
             raise IngestionError(f"git clone failed: {result.stderr.strip()[:300]}")
 
@@ -186,6 +190,6 @@ def cleanup_clone(repository_id: int) -> None:
     """Remove a repository's sandbox clone directory."""
     try:
         target = repo_clone_path(repository_id)
-    except Exception:  # noqa: BLE001 - path guard failure means nothing to clean
+    except Exception:  # noqa: BLE001
         return
     shutil.rmtree(target, ignore_errors=True)

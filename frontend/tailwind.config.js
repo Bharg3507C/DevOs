@@ -1,27 +1,42 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  darkMode: "class",
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
+      // Colors are driven by CSS variables (see index.css) so the same tokens
+      // work in both light and dark themes. Palette: rose #db5461,
+      // sage #8aa29e, light blue #e3f2fd.
       colors: {
-        // Neutral, professional developer-tool palette.
         bg: {
-          DEFAULT: "#0b0d10",
-          soft: "#111418",
-          card: "#15191e",
+          DEFAULT: "rgb(var(--bg) / <alpha-value>)",
+          soft: "rgb(var(--bg-soft) / <alpha-value>)",
+          card: "rgb(var(--bg-card) / <alpha-value>)",
+          elevated: "rgb(var(--bg-elevated) / <alpha-value>)",
         },
         border: {
-          DEFAULT: "#232a31",
+          DEFAULT: "rgb(var(--border) / <alpha-value>)",
+          strong: "rgb(var(--border-strong) / <alpha-value>)",
+        },
+        content: {
+          DEFAULT: "rgb(var(--content) / <alpha-value>)",
+          muted: "rgb(var(--content-muted) / <alpha-value>)",
+          faint: "rgb(var(--content-faint) / <alpha-value>)",
         },
         accent: {
-          DEFAULT: "#4f8cff",
-          soft: "#2b3a55",
+          DEFAULT: "rgb(var(--accent) / <alpha-value>)",
+          strong: "rgb(var(--accent-strong) / <alpha-value>)",
+          soft: "rgb(var(--accent-soft) / <alpha-value>)",
+          contrast: "rgb(var(--accent-contrast) / <alpha-value>)",
+        },
+        highlight: "rgb(var(--highlight) / <alpha-value>)",
+        sage: {
+          DEFAULT: "rgb(var(--sage) / <alpha-value>)",
+          soft: "rgb(var(--sage-soft) / <alpha-value>)",
         },
         risk: {
-          high: "#f26d6d",
-          medium: "#e3b341",
-          low: "#4ec9a5",
+          high: "rgb(var(--risk-high) / <alpha-value>)",
+          medium: "rgb(var(--risk-medium) / <alpha-value>)",
+          low: "rgb(var(--risk-low) / <alpha-value>)",
         },
       },
       fontFamily: {

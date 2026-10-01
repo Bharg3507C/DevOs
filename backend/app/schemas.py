@@ -21,6 +21,10 @@ class AskRequest(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
 
 
+class ImpactRequest(BaseModel):
+    file_id: int
+
+
 # --- Responses ---
 class RepositoryOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -145,3 +149,126 @@ class FileDetailOut(BaseModel):
     dependents_count: int
     dependencies_count: int
     max_complexity: int
+
+
+# --- Architecture / dependency graph ---
+
+class ArchNodeOut(BaseModel):
+    id: str
+    path: str
+    language: str | None
+    loc: int
+    is_test: bool
+    num_functions: int
+    num_classes: int
+    dependency_count: int
+    dependent_count: int
+
+
+class ArchEdgeOut(BaseModel):
+    source: str
+    target: str
+    via_module: str | None
+
+
+class CircularDependencyOut(BaseModel):
+    cycle: list[str]  # ordered list of file paths forming the cycle
+
+
+class ArchitectureOut(BaseModel):
+    nodes: list[ArchNodeOut]
+    edges: list[ArchEdgeOut]
+    circular_dependencies: list[CircularDependencyOut]
+
+
+# --- Git history ---
+
+class CommitOut(BaseModel):
+    sha: str
+    author_name: str | None
+    author_email: str | None
+    message: str | None
+    committed_at: datetime | None
+    files_changed: int
+
+
+class FileChurnOut(BaseModel):
+    path: str
+    file_id: int | None
+    change_count: int
+    total_insertions: int
+    total_deletions: int
+
+
+class ContributorOut(BaseModel):
+    login: str
+    commit_count: int
+
+
+class CommitsOverTimeOut(BaseModel):
+    date: str   # ISO date YYYY-MM-DD
+    count: int
+
+
+class GitHistoryOut(BaseModel):
+    commits: list[CommitOut]
+    top_changed_files: list[FileChurnOut]
+    contributors: list[ContributorOut]
+    commits_over_time: list[CommitsOverTimeOut]
+    total_commits: int
+
+
+# --- Search ---
+
+class SearchResultOut(BaseModel):
+    file_id: int
+    path: str
+    language: str | None
+    kind: str              # "file" | "function" | "class" | "import"
+    symbol: str | None
+    start_line: int | None
+    end_line: int | None
+    match_reason: str
+
+
+class SearchOut(BaseModel):
+    query: str
+    results: list[SearchResultOut]
+    total: int
+
+
+# --- Change impact ---
+
+class ImpactNodeOut(BaseModel):
+    file_id: int
+    path: str
+    distance: int          # hops from the origin
+    kind: str              # "direct" | "indirect" | "test"
+
+
+class ImpactOut(BaseModel):
+    origin_file_id: int
+    origin_path: str
+    directly_affected: int
+    indirectly_affected: int
+    related_tests: int
+    nodes: list[ImpactNodeOut]
+
+
+# --- Technical debt ---
+
+class DebtFindingOut(BaseModel):
+    file_id: int | None
+    path: str | None
+    severity: str           # "high" | "medium" | "low" | "info"
+    score: float
+    reasons: list[str]
+    signals: dict | None
+
+
+class TechnicalDebtOut(BaseModel):
+    findings: list[DebtFindingOut]
+    total_findings: int
+    high_count: int
+    medium_count: int
+    low_count: int

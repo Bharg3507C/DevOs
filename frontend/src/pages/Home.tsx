@@ -63,30 +63,43 @@ const COMPARISON: {
   { capability: "Works on GitLab repos", devos: true, github: false, gitlab: true },
 ];
 
+const STATS = [
+  ["Static", "no code executed"],
+  ["Traceable", "file · line · metric"],
+  ["2 providers", "GitHub + GitLab"],
+  ["Deterministic", "no fake AI scores"],
+];
+
 function Cell({ value }: { value: boolean | string }) {
   if (value === true)
-    return <span className="text-risk-low">Yes</span>;
+    return (
+      <span className="inline-flex items-center gap-1 text-risk-low">
+        <span className="text-base leading-none">✓</span> Yes
+      </span>
+    );
   if (value === false)
-    return <span className="text-slate-600">No</span>;
-  return <span className="text-slate-400">{value}</span>;
+    return <span className="text-content-faint">—</span>;
+  return <span className="text-content-muted">{value}</span>;
 }
 
 export function Home() {
   const { authenticated } = useAuth();
 
   return (
-    <div className="min-h-full bg-bg text-slate-200">
+    <div className="min-h-full bg-bg text-content">
       {/* Nav */}
-      <header className="sticky top-0 z-20 border-b border-border/60 bg-bg/80 backdrop-blur">
+      <header className="sticky top-0 z-20 border-b border-border/60 glass">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-2">
-            <div className="h-5 w-5 rounded bg-accent" />
+            <div className="grid h-6 w-6 place-items-center rounded-md bg-gradient-to-br from-accent to-accent-strong text-[11px] font-bold text-white">
+              D
+            </div>
             <span className="font-semibold tracking-tight">DevOS</span>
           </div>
-          <nav className="hidden items-center gap-6 text-sm text-slate-400 md:flex">
-            <a href="#features" className="hover:text-slate-200">Features</a>
-            <a href="#how" className="hover:text-slate-200">How it works</a>
-            <a href="#compare" className="hover:text-slate-200">Compare</a>
+          <nav className="hidden items-center gap-7 text-sm text-content-muted md:flex">
+            <a href="#features" className="hover:text-content">Features</a>
+            <a href="#how" className="hover:text-content">How it works</a>
+            <a href="#compare" className="hover:text-content">Compare</a>
           </nav>
           <Link to="/dashboard" className="btn-primary">
             {authenticated ? "Open app" : "Launch DevOS"}
@@ -96,20 +109,27 @@ export function Home() {
 
       {/* Hero */}
       <section className="relative overflow-hidden">
+        {/* Layered backdrop: subtle grid, rose glow, and the 3D graph. */}
+        <div className="pointer-events-none absolute inset-0 bg-grid opacity-[0.35]" />
+        <div className="pointer-events-none absolute -right-40 -top-40 h-[36rem] w-[36rem] rounded-full bg-accent/20 blur-[120px]" />
         <div className="pointer-events-none absolute inset-0">
-          <DependencyGraph3D className="absolute right-[-10%] top-[-10%] h-[130%] w-[70%] opacity-70" />
-          <div className="absolute inset-0 bg-gradient-to-r from-bg via-bg/70 to-transparent" />
+          <DependencyGraph3D className="absolute right-[-8%] top-[-6%] h-[120%] w-[62%] opacity-80" />
+          <div className="absolute inset-0 bg-gradient-to-r from-bg via-bg/85 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-bg to-transparent" />
         </div>
-        <div className="relative mx-auto max-w-6xl px-6 py-24 md:py-32">
+        <div className="relative mx-auto max-w-6xl px-6 py-28 md:py-36">
           <div className="max-w-2xl">
-            <span className="inline-flex items-center rounded-full border border-border bg-bg-soft px-3 py-1 text-xs text-slate-400">
+            <span className="inline-flex items-center gap-2 rounded-full border border-border-strong bg-bg-soft/80 px-3 py-1 text-xs text-content-muted">
+              <span className="h-1.5 w-1.5 rounded-full bg-accent" />
               Developer intelligence, not another dashboard
             </span>
-            <h1 className="mt-5 text-4xl font-semibold leading-tight tracking-tight md:text-6xl">
-              Understand your codebase
-              <span className="block text-accent">before you change it.</span>
+            <h1 className="mt-6 text-5xl font-semibold leading-[1.05] tracking-tight md:text-7xl">
+              Understand your
+              <br />
+              codebase{" "}
+              <span className="text-gradient">before you change it.</span>
             </h1>
-            <p className="mt-5 max-w-xl text-lg text-slate-400">
+            <p className="mt-6 max-w-xl text-lg leading-relaxed text-content-muted">
               DevOS connects to a real GitHub or GitLab repository, statically
               analyses the code, and builds a traceable knowledge graph of your
               architecture, dependencies, technical debt, and change impact.
@@ -117,10 +137,19 @@ export function Home() {
             <div className="mt-8">
               <SignInButtons size="lg" />
             </div>
-            <p className="mt-4 text-xs text-slate-600">
+            <p className="mt-4 text-xs text-content-faint">
               Every insight is traceable to a file, a line, or a metric. No
               fabricated statistics.
             </p>
+
+            <div className="mt-12 grid max-w-lg grid-cols-2 gap-x-8 gap-y-4 sm:grid-cols-4">
+              {STATS.map(([big, small]) => (
+                <div key={big}>
+                  <div className="text-sm font-semibold text-content">{big}</div>
+                  <div className="text-xs text-content-faint">{small}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -133,7 +162,7 @@ export function Home() {
               A repo tells you what the code is. It doesn&apos;t tell you what
               will break.
             </h2>
-            <p className="mt-4 max-w-3xl text-slate-400">
+            <p className="mt-4 max-w-3xl text-content-muted">
               Before touching a function, engineers need to know what depends on
               it, where the risk is concentrated, and why a module exists. That
               knowledge is scattered across the code, the Git history, and
@@ -145,20 +174,26 @@ export function Home() {
       </section>
 
       {/* Features */}
-      <section id="features" className="mx-auto max-w-6xl px-6 py-20">
+      <section id="features" className="mx-auto max-w-6xl px-6 py-24">
         <Reveal>
-          <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">
+          <p className="eyebrow">Capabilities</p>
+          <h2 className="mt-2 text-3xl font-semibold tracking-tight md:text-4xl">
             What DevOS does
           </h2>
         </Reveal>
-        <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map((f, i) => (
             <Reveal key={f.title} delay={i * 60}>
-              <div className="card h-full">
-                <h3 className="text-sm font-semibold text-slate-200">
+              <div className="card card-hover group h-full">
+                <div className="mb-3 grid h-9 w-9 place-items-center rounded-lg border border-border-strong bg-bg-soft text-sm font-semibold text-accent transition-colors group-hover:border-accent/50">
+                  {String(i + 1).padStart(2, "0")}
+                </div>
+                <h3 className="text-base font-semibold text-content">
                   {f.title}
                 </h3>
-                <p className="mt-2 text-sm text-slate-400">{f.body}</p>
+                <p className="mt-2 text-sm leading-relaxed text-content-muted">
+                  {f.body}
+                </p>
               </div>
             </Reveal>
           ))}
@@ -166,14 +201,15 @@ export function Home() {
       </section>
 
       {/* How it works */}
-      <section id="how" className="border-t border-border/60 bg-bg-soft/40">
-        <div className="mx-auto max-w-6xl px-6 py-20">
+      <section id="how" className="border-y border-border/60 bg-bg-soft/40">
+        <div className="mx-auto max-w-6xl px-6 py-24">
           <Reveal>
-            <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">
+            <p className="eyebrow">Pipeline</p>
+            <h2 className="mt-2 text-3xl font-semibold tracking-tight md:text-4xl">
               How repository analysis works
             </h2>
           </Reveal>
-          <div className="mt-8 grid gap-4 md:grid-cols-3">
+          <div className="mt-10 grid gap-4 md:grid-cols-3">
             {[
               ["Connect", "Sign in with GitHub or GitLab. DevOS verifies access and reads metadata."],
               ["Ingest safely", "The repo is cloned into a sandbox. Code is parsed statically and never executed."],
@@ -183,10 +219,16 @@ export function Home() {
               ["Ask", "The grounded AI layer answers with cited evidence from your repo."],
             ].map(([title, body], i) => (
               <Reveal key={title} delay={i * 60}>
-                <div className="card h-full">
-                  <div className="text-xs text-accent">Step {i + 1}</div>
-                  <h3 className="mt-1 text-sm font-semibold">{title}</h3>
-                  <p className="mt-1 text-sm text-slate-400">{body}</p>
+                <div className="card card-hover h-full">
+                  <div className="flex items-center gap-2">
+                    <span className="grid h-6 w-6 place-items-center rounded-full bg-accent/15 text-xs font-semibold text-accent">
+                      {i + 1}
+                    </span>
+                    <h3 className="text-sm font-semibold">{title}</h3>
+                  </div>
+                  <p className="mt-2 text-sm leading-relaxed text-content-muted">
+                    {body}
+                  </p>
                 </div>
               </Reveal>
             ))}
@@ -195,12 +237,13 @@ export function Home() {
       </section>
 
       {/* Comparison */}
-      <section id="compare" className="mx-auto max-w-6xl px-6 py-20">
+      <section id="compare" className="mx-auto max-w-6xl px-6 py-24">
         <Reveal>
-          <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">
+          <p className="eyebrow">Where it fits</p>
+          <h2 className="mt-2 text-3xl font-semibold tracking-tight md:text-4xl">
             DevOS vs GitHub vs GitLab
           </h2>
-          <p className="mt-3 max-w-3xl text-slate-400">
+          <p className="mt-3 max-w-3xl text-content-muted">
             GitHub and GitLab are excellent places to host and ship code. DevOS
             is a different layer: it works <em>on top of</em> the repositories
             you already keep there, answering questions about structure and risk
@@ -208,29 +251,43 @@ export function Home() {
           </p>
         </Reveal>
         <Reveal>
-          <div className="mt-8 overflow-x-auto rounded-lg border border-border">
+          <div className="mt-10 overflow-hidden rounded-xl border border-border">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border bg-bg-soft text-left">
-                  <th className="px-4 py-3 font-medium">Capability</th>
-                  <th className="px-4 py-3 font-medium text-accent">DevOS</th>
-                  <th className="px-4 py-3 font-medium">GitHub</th>
-                  <th className="px-4 py-3 font-medium">GitLab</th>
+                <tr className="bg-bg-soft text-left">
+                  <th className="px-5 py-4 font-medium text-content-muted">
+                    Capability
+                  </th>
+                  <th className="px-5 py-4 font-semibold text-accent">
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full bg-accent" />
+                      DevOS
+                    </span>
+                  </th>
+                  <th className="px-5 py-4 font-medium text-content-muted">GitHub</th>
+                  <th className="px-5 py-4 font-medium text-content-muted">GitLab</th>
                 </tr>
               </thead>
               <tbody>
-                {COMPARISON.map((row) => (
-                  <tr key={row.capability} className="border-b border-border/60">
-                    <td className="px-4 py-3 text-slate-300">{row.capability}</td>
-                    <td className="px-4 py-3"><Cell value={row.devos} /></td>
-                    <td className="px-4 py-3"><Cell value={row.github} /></td>
-                    <td className="px-4 py-3"><Cell value={row.gitlab} /></td>
+                {COMPARISON.map((row, i) => (
+                  <tr
+                    key={row.capability}
+                    className={`border-t border-border/60 ${
+                      i % 2 ? "bg-bg-soft/30" : ""
+                    }`}
+                  >
+                    <td className="px-5 py-3.5 text-content">{row.capability}</td>
+                    <td className="bg-accent/[0.06] px-5 py-3.5 font-medium">
+                      <Cell value={row.devos} />
+                    </td>
+                    <td className="px-5 py-3.5"><Cell value={row.github} /></td>
+                    <td className="px-5 py-3.5"><Cell value={row.gitlab} /></td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <p className="mt-3 text-xs text-slate-600">
+          <p className="mt-3 text-xs text-content-faint">
             Comparison reflects DevOS&apos;s focus on static code intelligence.
             GitHub and GitLab offer broad DevOps platforms; the rows above only
             cover code-understanding capabilities.
@@ -239,27 +296,35 @@ export function Home() {
       </section>
 
       {/* CTA */}
-      <section className="border-t border-border/60 bg-bg-soft/40">
-        <div className="mx-auto max-w-6xl px-6 py-20 text-center">
-          <Reveal>
-            <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">
-              Point DevOS at a repository.
-            </h2>
-            <p className="mx-auto mt-3 max-w-xl text-slate-400">
-              Connect GitHub or GitLab and get a traceable map of your codebase
-              in minutes.
-            </p>
-            <div className="mt-8 flex justify-center">
-              <SignInButtons size="lg" />
+      <section className="mx-auto max-w-6xl px-6 pb-24">
+        <Reveal>
+          <div className="relative overflow-hidden rounded-2xl border border-border-strong bg-bg-card px-8 py-16 text-center">
+            <div className="pointer-events-none absolute -top-24 left-1/2 h-64 w-[42rem] -translate-x-1/2 rounded-full bg-accent/20 blur-[100px]" />
+            <div className="relative">
+              <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">
+                Point DevOS at a repository.
+              </h2>
+              <p className="mx-auto mt-3 max-w-xl text-content-muted">
+                Connect GitHub or GitLab and get a traceable map of your codebase
+                in minutes.
+              </p>
+              <div className="mt-8 flex justify-center">
+                <SignInButtons size="lg" />
+              </div>
             </div>
-          </Reveal>
-        </div>
+          </div>
+        </Reveal>
       </section>
 
       <footer className="border-t border-border/60">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-6 py-8 text-xs text-slate-600 sm:flex-row">
-          <span>DevOS · Understand your codebase before you change it.</span>
-          <Link to="/dashboard" className="hover:text-slate-400">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-6 py-8 text-xs text-content-faint sm:flex-row">
+          <div className="flex items-center gap-2">
+            <div className="grid h-5 w-5 place-items-center rounded bg-gradient-to-br from-accent to-accent-strong text-[9px] font-bold text-white">
+              D
+            </div>
+            <span>DevOS · Understand your codebase before you change it.</span>
+          </div>
+          <Link to="/dashboard" className="hover:text-content-muted transition-colors">
             Open the app →
           </Link>
         </div>

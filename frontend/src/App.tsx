@@ -10,7 +10,11 @@ import { RepositoryPage } from "./pages/RepositoryPage";
 import { Files } from "./pages/Files";
 import { FileDetailPage } from "./pages/FileDetailPage";
 import { Settings } from "./pages/Settings";
-import { ComingSoon } from "./pages/ComingSoon";
+import { ArchitecturePage } from "./pages/ArchitecturePage";
+import { GitHistoryPage } from "./pages/GitHistoryPage";
+import { ImpactPage } from "./pages/ImpactPage";
+import { TechnicalDebtPage } from "./pages/TechnicalDebtPage";
+import { SearchPage } from "./pages/SearchPage";
 
 // Gates the app shell behind authentication. The dev-mode local user counts as
 // authenticated, so local development still works without OAuth configured.
@@ -18,7 +22,7 @@ function RequireAuth({ children }: { children: ReactNode }) {
   const { authenticated, loading } = useAuth();
   if (loading)
     return (
-      <div className="flex h-full items-center justify-center bg-bg text-sm text-slate-500">
+      <div className="flex h-full items-center justify-center bg-bg text-sm text-content-faint">
         Loading…
       </div>
     );
@@ -41,32 +45,16 @@ export default function App() {
             </RequireAuth>
           }
         >
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/repository" element={<RepositoryPage />} />
-          <Route path="/files" element={<Files />} />
-          <Route path="/file/:path" element={<FileDetailPage />} />
-          <Route path="/settings" element={<Settings />} />
-          {/* Later-phase routes: honest placeholders, never fake data. */}
-          <Route
-            path="/architecture"
-            element={<ComingSoon title="Architecture" phase="Phase 2" />}
-          />
-          <Route
-            path="/impact"
-            element={<ComingSoon title="Change Impact" phase="Phase 3" />}
-          />
-          <Route
-            path="/technical-debt"
-            element={<ComingSoon title="Technical Debt" phase="Phase 4" />}
-          />
-          <Route
-            path="/git-history"
-            element={<ComingSoon title="Git History" phase="Phase 3" />}
-          />
-          <Route
-            path="/search"
-            element={<ComingSoon title="Search" phase="Phase 5" />}
-          />
+          <Route path="/dashboard"      element={<Dashboard />} />
+          <Route path="/repository"     element={<RepositoryPage />} />
+          <Route path="/architecture"   element={<ArchitecturePage />} />
+          <Route path="/files"          element={<Files />} />
+          <Route path="/file/:path"     element={<FileDetailPage />} />
+          <Route path="/impact"         element={<ImpactPage />} />
+          <Route path="/technical-debt" element={<TechnicalDebtPage />} />
+          <Route path="/git-history"    element={<GitHistoryPage />} />
+          <Route path="/search"         element={<SearchPage />} />
+          <Route path="/settings"       element={<Settings />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

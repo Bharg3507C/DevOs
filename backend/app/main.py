@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.api import auth, diagnostics, jobs, repositories
+from app.api import architecture, git_history, search, impact, technical_debt
 from app.core.config import get_settings
 from app.core.logging import configure_logging, get_logger
 from app.db.base import init_db
@@ -79,6 +80,11 @@ def create_app() -> FastAPI:
     app.include_router(repositories.router)
     app.include_router(jobs.router)
     app.include_router(diagnostics.router)
+    app.include_router(architecture.router)
+    app.include_router(git_history.router)
+    app.include_router(search.router)
+    app.include_router(impact.router)
+    app.include_router(technical_debt.router)
     return app
 
 

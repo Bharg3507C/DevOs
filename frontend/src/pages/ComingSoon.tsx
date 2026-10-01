@@ -1,14 +1,21 @@
-// Honest placeholder for routes whose backend analysis lands in a later phase.
-// It never displays fabricated data.
 export function ComingSoon({ title, phase }: { title: string; phase: string }) {
   return (
-    <div className="card max-w-2xl">
-      <h1 className="text-lg font-semibold">{title}</h1>
-      <p className="mt-2 text-sm text-slate-400">
-        This view is planned for <span className="text-slate-200">{phase}</span>.
-        DevOS only shows insights that are derived from real repository analysis,
-        so this page will light up once the underlying analysis is implemented.
-      </p>
+    <div className="flex h-full flex-col items-center justify-center gap-5 p-8 text-center">
+      <div className="grid h-14 w-14 place-items-center rounded-2xl border border-border-strong bg-bg-card text-2xl text-content-faint">
+        ◈
+      </div>
+      <div>
+        <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
+        <p className="mt-2 max-w-sm text-sm text-content-muted">
+          This view is planned for{" "}
+          <span className="font-medium text-content">{phase}</span>. DevOS only
+          shows insights derived from real repository analysis — this page will
+          light up once the underlying analysis is implemented.
+        </p>
+      </div>
+      <div className="rounded-full border border-border px-3 py-1 text-xs text-content-faint">
+        {phase}
+      </div>
     </div>
   );
 }

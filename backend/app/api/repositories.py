@@ -23,6 +23,7 @@ from fastapi import (
     Query,
     status,
 )
+from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -61,6 +62,20 @@ from app.services.providers import (
     RepositoryAccessError,
     get_provider,
 )
+
+
+class BrowseRepoItem(BaseModel):
+    full_name: str
+    owner: str
+    name: str
+    is_private: bool
+    primary_language: str | None
+    default_branch: str
+    size_kb: int
+
+
+class BrowseResult(BaseModel):
+    items: list[BrowseRepoItem]
 
 router = APIRouter(prefix="/api/repositories", tags=["repositories"])
 logger = get_logger("devos.api.repositories")
@@ -172,6 +187,41 @@ def analyse_repository(
 
     background.add_task(run_analysis, job.id)
     return AnalyseResponse(job=AnalysisJobOut.model_validate(job))
+
+
+@router.get("/browse", response_model=BrowseResult)
+def browse_provider_repos(
+    db: Session = Depends(get_db),
+    user: User = Depends(rate_limit_default),
+) -> BrowseResult:
+    """List repositories available from the user's connected provider.
+
+    Returns up to 100 repos sorted by most-recently-pushed. Used to populate
+    the quick-connect picker so the user doesn't have to type owner/name.
+    Only works when the user has an access token (real OAuth sign-in).
+    Falls back to an empty list in dev-login mode so the UI degrades gracefully.
+    """
+    if not user.access_token:
+        return BrowseResult(items=[])
+    provider = get_provider(user.provider, token=user.access_token)
+    try:
+        metas = provider.list_user_repos(per_page=100)
+    except ProviderError:
+        return BrowseResult(items=[])
+
+    items = [
+        BrowseRepoItem(
+            full_name=m.full_name,
+            owner=m.owner,
+            name=m.name,
+            is_private=m.is_private,
+            primary_language=m.primary_language,
+            default_branch=m.default_branch,
+            size_kb=m.size_kb,
+        )
+        for m in metas
+    ]
+    return BrowseResult(items=items)
 
 
 @router.get("", response_model=list[RepositoryOut])

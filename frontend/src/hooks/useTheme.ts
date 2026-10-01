@@ -3,7 +3,8 @@ import { useCallback, useEffect, useState } from "react";
 type Theme = "dark" | "light";
 const KEY = "devos.theme";
 
-// Dark mode is the default; light mode is opt-in and persisted.
+// Dark is the default (no class on <html>). The `light` class opts into the
+// light theme. Choice is persisted across sessions.
 export function useTheme() {
   const [theme, setTheme] = useState<Theme>(() => {
     return (localStorage.getItem(KEY) as Theme) ?? "dark";
@@ -11,8 +12,8 @@ export function useTheme() {
 
   useEffect(() => {
     const root = document.documentElement;
-    if (theme === "dark") root.classList.add("dark");
-    else root.classList.remove("dark");
+    if (theme === "light") root.classList.add("light");
+    else root.classList.remove("light");
     localStorage.setItem(KEY, theme);
   }, [theme]);
 

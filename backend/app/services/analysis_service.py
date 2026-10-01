@@ -44,7 +44,6 @@ from app.services import ingestion
 from app.services.providers import get_provider
 
 logger = get_logger("devos.analysis")
-settings = get_settings()
 
 STEP_NAMES = [
     "Reading files",
@@ -362,7 +361,7 @@ def run_analysis(job_id: int) -> None:
         # 2. Parse
         parsed_files: list[ParsedFile] = []
         failures = 0
-        for src in iter_source_files(repo_path, settings.max_files, settings.max_file_bytes):
+        for src in iter_source_files(repo_path, get_settings().max_files, get_settings().max_file_bytes):
             parsed = parse_file(repo_path, src)
             if parsed is None:
                 continue

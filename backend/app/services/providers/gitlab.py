@@ -1,8 +1,4 @@
-"""GitLab provider implementation.
-
-GitLab identifies projects by a URL-encoded ``namespace/project`` path. We use
-that path as the provider repo id and to resolve metadata/languages.
-"""
+"""GitLab provider implementation."""
 
 from __future__ import annotations
 
@@ -65,7 +61,7 @@ class GitLabProvider:
             default_branch=data.get("default_branch") or "main",
             clone_url=data["http_url_to_repo"],
             is_private=data.get("visibility", "private") != "public",
-            primary_language=None,  # filled from languages endpoint below
+            primary_language=None,
             size_kb=int((data.get("statistics", {}) or {}).get("repository_size", 0)) // 1024,
         )
 
@@ -79,15 +75,49 @@ class GitLabProvider:
             raise ProviderError(f"GitLab request failed: {exc}") from exc
         if resp.status_code >= 400:
             return {}
-        # GitLab returns percentages (floats). Normalise to int-ish weights so
-        # the shared schema (Dict[str, int]) holds; relative ordering is kept.
         raw = resp.json()
         return {lang: int(round(pct * 100)) for lang, pct in raw.items()}
+
+    def list_user_repos(self, per_page: int = 100) -> list[RepoMetadata]:
+        """List projects the authenticated user has access to."""
+        if not self._token:
+            return []
+        url = f"{self._api}/projects"
+        params = {
+            "membership": "true",
+            "per_page": str(per_page),
+            "order_by": "last_activity_at",
+            "direction": "desc",
+        }
+        try:
+            with httpx.Client(timeout=self._timeout) as client:
+                resp = client.get(url, headers=self._headers(), params=params)
+        except httpx.HTTPError as exc:
+            raise ProviderError(f"GitLab request failed: {exc}") from exc
+        if resp.status_code >= 400:
+            return []
+        repos: list[RepoMetadata] = []
+        for data in resp.json():
+            namespace = data.get("namespace", {}).get("full_path") or ""
+            repos.append(
+                RepoMetadata(
+                    provider=self.name,
+                    provider_repo_id=str(data["id"]),
+                    owner=namespace,
+                    name=data["path"],
+                    full_name=data.get("path_with_namespace", data["path"]),
+                    default_branch=data.get("default_branch") or "main",
+                    clone_url=data["http_url_to_repo"],
+                    is_private=data.get("visibility", "private") != "public",
+                    primary_language=None,
+                    size_kb=0,
+                )
+            )
+        return repos
 
     def authenticated_clone_url(self, clone_url: str, token: str | None) -> str:
         if not token:
             return clone_url
         parsed = urlparse(clone_url)
-        # oauth2 is GitLab's basic-auth username for OAuth/personal tokens.
         netloc = f"oauth2:{quote(token, safe='')}@{parsed.netloc}"
         return urlunparse(parsed._replace(netloc=netloc))

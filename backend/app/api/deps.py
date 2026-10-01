@@ -48,13 +48,16 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
     Falls back to a local development user only when OAuth is not configured and
     the app runs in development mode.
     """
-    user_id = request.session.get("user_id") if hasattr(request, "session") else None
+    session = request.session if hasattr(request, "session") else {}
+    user_id = session.get("user_id")
     if user_id is not None:
         user = db.get(User, user_id)
         if user is not None:
             return user
 
-    if settings.environment == "development" and not settings.any_oauth_configured:
+    # After an explicit sign-out we do not silently re-issue the dev user; the
+    # user must click sign in again. This makes logout meaningful in dev mode.
+    if settings.dev_login_active and not session.get("signed_out"):
         return _get_or_create_local_user(db)
 
     raise HTTPException(

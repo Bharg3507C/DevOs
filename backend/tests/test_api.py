@@ -20,6 +20,11 @@ def client(monkeypatch):
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
 
+    # Clear the lru_cache on get_settings so the test environment variables
+    # (blank OAuth creds) are picked up by the app, enabling dev_login_active.
+    from app.core.config import get_settings
+    get_settings.cache_clear()
+
     # Patch provider metadata + languages so no network is used.
     def fake_meta(self, owner, name):
         return RepoMetadata(
